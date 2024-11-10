@@ -5,13 +5,13 @@ canvas.width = window.innerWidth;
 canvas.height = window.innerHeight;
 
 const vertexShaderSource = `
-  attribute vec2 aPosition;
-  attribute vec2 aTexCoord;
-  varying vec2 vTexCoord;
-  void main() {
-    gl_Position = vec4(aPosition, 0.0, 1.0);
-    vTexCoord = aTexCoord;
-  }
+attribute vec2 aPosition;
+attribute vec2 aTexCoord;
+varying vec2 vTexCoord;
+void main() {
+gl_Position = vec4(aPosition, 0.0, 1.0);
+vTexCoord = aTexCoord;
+}
 `;
 const fragmentShaderSource = `
 precision mediump float;
@@ -24,33 +24,31 @@ uniform float theta_offset;
 uniform float zoom;
 uniform float aspect_ratio;
 
-    vec3 rotateVector(float x,float y,float z, float angleX, float angleY, float angleZ) {
-        vec3 v = vec3(x, y, z);
-        mat3 rotationX = mat3(
-            1.0, 0.0, 0.0,
-            0.0, cos(angleX), -sin(angleX),
-            0.0, sin(angleX), cos(angleX)
-        );
-        mat3 rotationY = mat3(
-            cos(angleY), 0.0, sin(angleY),
-            0.0, 1.0, 0.0,
-            -sin(angleY), 0.0, cos(angleY)
-        );
-        mat3 rotationZ = mat3(
-            cos(angleZ), -sin(angleZ), 0.0,
-            sin(angleZ), cos(angleZ), 0.0,
-            0.0, 0.0, 1.0
-        );
-        return rotationZ * rotationY * rotationX * v;
-    }
+vec3 rotateVector(float x,float y,float z, float angleX, float angleY, float angleZ) {
+    vec3 v = vec3(x, y, z);
+    mat3 rotationX = mat3(
+        1.0, 0.0, 0.0,
+        0.0, cos(angleX), -sin(angleX),
+        0.0, sin(angleX), cos(angleX)
+    );
+    mat3 rotationY = mat3(
+        cos(angleY), 0.0, sin(angleY),
+        0.0, 1.0, 0.0,
+        -sin(angleY), 0.0, cos(angleY)
+    );
+    mat3 rotationZ = mat3(
+        cos(angleZ), -sin(angleZ), 0.0,
+        sin(angleZ), cos(angleZ), 0.0,
+        0.0, 0.0, 1.0
+    );
+    return rotationZ * rotationY * rotationX * v;
+}
 
 float mapRange(float value, float inMin, float inMax, float outMin, float outMax) {
     return clamp((value - inMin) / (inMax - inMin) * (outMax - outMin) + outMin, outMin, outMax);
 }
 
-
-
-  void main() {
+void main() {
     float PI = 3.1415;
 
     float PI2 = PI * 2.0;
@@ -80,16 +78,16 @@ float mapRange(float value, float inMin, float inMax, float outMin, float outMax
     vec4 cloudColor = vec4(0.0, 0.0, 0.0, 0.0);
 
     if (x*x + y * y < r*r) {
-        dayColor = texture2D(uTextureDay, vec2(phi, theta));
-        nightColor = texture2D(uTextureNight, vec2(phi, theta));
-        cloudColor = texture2D(uTextureClouds, vec2(phi, theta));
+    dayColor = texture2D(uTextureDay, vec2(phi, theta));
+    nightColor = texture2D(uTextureNight, vec2(phi, theta));
+    cloudColor = texture2D(uTextureClouds, vec2(phi, theta));
     }
 
     vec3 sunDir = rotateVector(x, y, z, -1.0, -.1, 0.0);
     float alpha = mapRange(sunDir.x, -0.1, 0.1, 0.1, 1.0);
     float cloudAlpha = mapRange(zoom, 0.1, 0.3, 0.0, 1.0);
     gl_FragColor = mix(nightColor,dayColor, alpha) + alpha*cloudColor*cloudAlpha;
-  }
+}
 `;
 
 function createShader(gl, type, source) {
@@ -171,7 +169,7 @@ gl.vertexAttribPointer(aTexCoord, 2, gl.FLOAT, false, 4 * 4, 2 * 4);
 gl.enableVertexAttribArray(aTexCoord);
 gl.viewport(0, 0, canvas.width, canvas.height);
 
-// Load the image and create a texture
+// Load the images
 const daymap = new Image();
 const nightmap = new Image();
 const clouds = new Image();
@@ -205,10 +203,13 @@ function startAnimation() {
 }
 startAnimation();
 
+
+// some starting values for interactions
 let isDragging = false;
 let startX = 0;
 let startY = 0;
 
+// handle inputs
 canvas.addEventListener("mousedown", (event) => {
     isDragging = true;
     startX = event.clientX;
@@ -231,7 +232,6 @@ canvas.addEventListener("mouseup", () => {
     isDragging = false;
 });
 
-// change zoom on scroll
 canvas.addEventListener("wheel", (event) => {
     event.preventDefault();
     zoom = clamp(zoom * (1 + event.deltaY / 1000), 0.1, 10);
