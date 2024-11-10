@@ -16,12 +16,25 @@
             margin: 0;
             padding: 0;
             overflow: hidden;
+            font-family: sans-serif;
         }
 
         canvas {
+            position: absolute;
+            z-index: -1;
             width: 100vw;
             height: 100vh;
-            image-rendering: pixelated;
+        }
+
+        input {
+            display: flex;
+            margin-left: 30px;
+            margin-bottom: 20px;
+        }
+
+        label {
+            color: white;
+            margin-left: 30px;
         }
     </style>
     <script src="script.js"></script>

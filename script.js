@@ -24,6 +24,8 @@ uniform float phi_offset;
 uniform float theta_offset;
 uniform float zoom;
 uniform float aspect_ratio;
+uniform float cloud_offset;
+uniform float earth_rotation;
 
 vec3 rotateVector(float x,float y,float z, float angleX, float angleY, float angleZ) {
     vec3 v = vec3(x, y, z);
@@ -73,13 +75,15 @@ void main() {
     float theta = acos(y/sqrt(x*x + y*y + z*z)) / PI;
 
     phi = mod(phi, 1.0);
+    float cloud_phi = mod(phi + cloud_offset, 1.0);
+    float earth_phi = mod(phi + earth_rotation, 1.0);
+
     theta = mod(theta, 1.0);
 
-
     if (x*x + y * y < r*r) {
-        vec4 dayColor = texture2D(uTextureDay, vec2(phi, theta));
-        vec4 nightColor = texture2D(uTextureNight, vec2(phi, theta));
-        vec4 cloudColor = texture2D(uTextureClouds, vec2(phi, theta));
+        vec4 dayColor = texture2D(uTextureDay, vec2(earth_phi, theta));
+        vec4 nightColor = texture2D(uTextureNight, vec2(earth_phi, theta));
+        vec4 cloudColor = texture2D(uTextureClouds, vec2(cloud_phi, theta));
         vec3 sunDir = rotateVector(x, y, z, -1.0, -.1, 0.0);
         float alpha = mapRange(sunDir.x, -0.1, 0.1, 0.1, 1.0);
         float cloudAlpha = mapRange(zoom, 0.1, 0.3, 0.0, 1.0);
@@ -101,6 +105,10 @@ void main() {
         theta = mod(theta, 1.0);
         gl_FragColor = texture2D(uTextureStars, vec2(phi, theta))*0.5;
     }
+    x = newUv.x * aspect_ratio;
+    y = newUv.y;
+    z = sqrt(r*r - x * x - y * y);
+    // gl_FragColor = vec4(z, z, z, 1.0);
 }
 `;
 
@@ -118,6 +126,10 @@ function createShader(gl, type, source) {
 
 function clamp(value, min, max) {
     return Math.min(Math.max(value, min), max);
+}
+
+function mapRange(value, inMin, inMax, outMin, outMax) {
+    return clamp((value - inMin) / (inMax - inMin) * (outMax - outMin) + outMin, outMin, outMax);
 }
 
 function loadTexture(image, index, texture, name) {
@@ -143,22 +155,35 @@ gl.attachShader(program, fragmentShader);
 gl.linkProgram(program);
 gl.useProgram(program);
 
+
+// set all uniforms
 const phiOffsetLocation = gl.getUniformLocation(program, "phi_offset");
 const thetaOffsetLocation = gl.getUniformLocation(program, "theta_offset");
 const zoomLocation = gl.getUniformLocation(program, "zoom");
 const resolutionLocation = gl.getUniformLocation(program, "resolution");
 const aspectRatioLocation = gl.getUniformLocation(program, "aspect_ratio");
+const cloudOffsetLocation = gl.getUniformLocation(program, "cloud_offset");
+const earthRotationLocation = gl.getUniformLocation(program, "earth_rotation");
 
 let phiOffset = 0.972;
 let thetaOffset = 0.29;
 let zoom = 1.0;
 let aspectRatio = canvas.width / canvas.height;
+let cloudOffset = 0.0;
+let earthRotation = 0.0;
 
+setAllUniforms();
 
-gl.uniform1f(thetaOffsetLocation, thetaOffset);
-gl.uniform1f(zoomLocation, zoom);
-gl.uniform2f(resolutionLocation, canvas.width, canvas.height);
-gl.uniform1f(aspectRatioLocation, aspectRatio);
+function setAllUniforms() {
+    gl.uniform1f(phiOffsetLocation, phiOffset);
+    gl.uniform1f(thetaOffsetLocation, thetaOffset);
+    gl.uniform1f(zoomLocation, zoom);
+    gl.uniform2f(resolutionLocation, canvas.width, canvas.height);
+    gl.uniform1f(aspectRatioLocation, aspectRatio);
+    gl.uniform1f(cloudOffsetLocation, cloudOffset);
+    gl.uniform1f(earthRotationLocation, earthRotation);
+}
+
 
 // Define vertices and texture coordinates
 const vertices = new Float32Array([
@@ -183,7 +208,6 @@ gl.vertexAttribPointer(aTexCoord, 2, gl.FLOAT, false, 4 * 4, 2 * 4);
 gl.enableVertexAttribArray(aTexCoord);
 gl.viewport(0, 0, canvas.width, canvas.height);
 
-// Load the images
 const daymap = new Image();
 const nightmap = new Image();
 const clouds = new Image();
@@ -209,8 +233,6 @@ clouds.onload = function () {
     loadTexture(clouds, 3, gl.TEXTURE3, "uTextureClouds");
 }
 
-
-// Function to render every frame
 function render() {
     gl.uniform1f(phiOffsetLocation, phiOffset);
     gl.clearColor(0.0, 0.0, 0.0, 1.0);
@@ -220,17 +242,22 @@ function render() {
 
 function startAnimation() {
     render();
+    cloudOffset -= 0.0002;
+    earthRotation -= 0.0003;
+    let delta = mapRange(zoom, 0.2, 0.4, -0.0006, 0);
+    phiOffset += delta;
+
+    gl.uniform1f(phiOffsetLocation, phiOffset);
+    gl.uniform1f(cloudOffsetLocation, cloudOffset);
+    gl.uniform1f(earthRotationLocation, earthRotation);
     requestAnimationFrame(startAnimation);
 }
 startAnimation();
 
-
-// some starting values for interactions
 let isDragging = false;
 let startX = 0;
 let startY = 0;
 
-// handle inputs
 canvas.addEventListener("mousedown", (event) => {
     isDragging = true;
     startX = event.clientX;
@@ -267,3 +294,24 @@ window.addEventListener("resize", () => {
     aspectRatio = canvas.width / canvas.height;
     gl.uniform1f(aspectRatioLocation, aspectRatio);
 });
+
+function addSlider(variable, min, max, location, name) {
+    const slider = document.createElement("input");
+    slider.type = "range";
+    slider.min = min;
+    slider.max = max;
+    slider.value = variable;
+    slider.step = 0.01;
+    slider.addEventListener("input", () => {
+        variable = slider.value;
+    });
+    const label = document.createElement("label");
+    label.textContent = name;
+    label.htmlFor = slider.id;
+    document.body.appendChild(label);
+    document.body.appendChild(slider);
+}
+
+// addSlider(thetaOffset, -1, 1, thetaOffsetLocation, "theta offset");
+// addSlider(zoom, 1, 10, zoomLocation, "zoom");
+// addSlider(cloudOffset, 0, 1, cloudOffsetLocation, "cloud offset");
