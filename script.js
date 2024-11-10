@@ -19,6 +19,7 @@ varying vec2 vTexCoord;
 uniform sampler2D uTextureDay;
 uniform sampler2D uTextureNight;
 uniform sampler2D uTextureClouds;
+uniform sampler2D uTextureStars;
 uniform float phi_offset;
 uniform float theta_offset;
 uniform float zoom;
@@ -57,6 +58,7 @@ void main() {
 
     vec2 newUv = (uv - 0.5)*zoom;
     float r = 0.5;
+
     float x = newUv.x * aspect_ratio;
     float y = newUv.y;
     float z = sqrt(r*r - x * x - y * y);
@@ -73,20 +75,32 @@ void main() {
     phi = mod(phi, 1.0);
     theta = mod(theta, 1.0);
 
-    vec4 dayColor = vec4(0.0, 0.0, 0.0, 0.0);
-    vec4 nightColor = vec4(0.0, 0.0, 0.0, 0.0);
-    vec4 cloudColor = vec4(0.0, 0.0, 0.0, 0.0);
 
     if (x*x + y * y < r*r) {
-    dayColor = texture2D(uTextureDay, vec2(phi, theta));
-    nightColor = texture2D(uTextureNight, vec2(phi, theta));
-    cloudColor = texture2D(uTextureClouds, vec2(phi, theta));
+        vec4 dayColor = texture2D(uTextureDay, vec2(phi, theta));
+        vec4 nightColor = texture2D(uTextureNight, vec2(phi, theta));
+        vec4 cloudColor = texture2D(uTextureClouds, vec2(phi, theta));
+        vec3 sunDir = rotateVector(x, y, z, -1.0, -.1, 0.0);
+        float alpha = mapRange(sunDir.x, -0.1, 0.1, 0.1, 1.0);
+        float cloudAlpha = mapRange(zoom, 0.1, 0.3, 0.0, 1.0);
+        gl_FragColor = mix(nightColor,dayColor, alpha) + alpha*cloudColor*cloudAlpha;
     }
-
-    vec3 sunDir = rotateVector(x, y, z, -1.0, -.1, 0.0);
-    float alpha = mapRange(sunDir.x, -0.1, 0.1, 0.1, 1.0);
-    float cloudAlpha = mapRange(zoom, 0.1, 0.3, 0.0, 1.0);
-    gl_FragColor = mix(nightColor,dayColor, alpha) + alpha*cloudColor*cloudAlpha;
+    else {
+        newUv = (uv - 0.5);
+        r = 1.0*aspect_ratio/2.0*1.5;
+        x = newUv.x * aspect_ratio;
+        y = newUv.y;
+        z = sqrt(r*r - x * x - y * y);
+        newVec = rotateVector(x, y, z, PI * -theta_offset, PI * -phi_offset, 0.0);
+        x = newVec.x;
+        y = newVec.y;
+        z = newVec.z;
+        phi = (abs(x)/x * acos(z/sqrt(z*z + x*x)))/PI2;
+        theta = acos(y/sqrt(x*x + y*y + z*z)) / PI;
+        phi = mod(phi, 1.0);
+        theta = mod(theta, 1.0);
+        gl_FragColor = texture2D(uTextureStars, vec2(phi, theta))*0.5;
+    }
 }
 `;
 
@@ -173,21 +187,28 @@ gl.viewport(0, 0, canvas.width, canvas.height);
 const daymap = new Image();
 const nightmap = new Image();
 const clouds = new Image();
+const stars = new Image();
 daymap.src = "textures/daymap.jpg";
 nightmap.src = "textures/nightmap.jpg";
 clouds.src = "textures/clouds.jpg";
+stars.src = "textures/starmap.jpg";
+
+stars.onload = function () {
+    loadTexture(stars, 0, gl.TEXTURE0, "uTextureStars");
+}
 
 daymap.onload = function () {
-    loadTexture(daymap, 0, gl.TEXTURE0, "uTextureDay");
+    loadTexture(daymap, 1, gl.TEXTURE1, "uTextureDay");
 }
 
 nightmap.onload = function () {
-    loadTexture(nightmap, 1, gl.TEXTURE1, "uTextureNight");
+    loadTexture(nightmap, 2, gl.TEXTURE2, "uTextureNight");
 }
 
 clouds.onload = function () {
-    loadTexture(clouds, 2, gl.TEXTURE2, "uTextureClouds");
+    loadTexture(clouds, 3, gl.TEXTURE3, "uTextureClouds");
 }
+
 
 // Function to render every frame
 function render() {
