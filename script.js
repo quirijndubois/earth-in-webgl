@@ -26,25 +26,46 @@ uniform float zoom;
 uniform float aspect_ratio;
 uniform float cloud_offset;
 uniform float earth_rotation;
+uniform float sun_phi;
+uniform float sun_theta;
+
+vec3 rotateVectorX(vec3 v, float angle) {
+    mat3 rotationX = mat3(
+        1.0, 0.0, 0.0,
+        0.0, cos(angle), -sin(angle),
+        0.0, sin(angle), cos(angle)
+    );
+    return rotationX * v;
+}
+
+vec3 rotateVectorY(vec3 v, float angle) {
+    mat3 rotationY = mat3(
+        cos(angle), 0.0, sin(angle),
+        0.0, 1.0, 0.0,
+        -sin(angle), 0.0, cos(angle)
+    );
+    return rotationY * v;
+}
+
+vec3 rotateVectorZ(vec3 v, float angle) {
+    mat3 rotationZ = mat3(
+        cos(angle), -sin(angle), 0.0,
+        sin(angle), cos(angle), 0.0,
+        0.0, 0.0, 1.0
+    );
+    return rotationZ * v;
+}
 
 vec3 rotateVector(float x,float y,float z, float angleX, float angleY, float angleZ) {
     vec3 v = vec3(x, y, z);
-    mat3 rotationX = mat3(
-        1.0, 0.0, 0.0,
-        0.0, cos(angleX), -sin(angleX),
-        0.0, sin(angleX), cos(angleX)
-    );
-    mat3 rotationY = mat3(
-        cos(angleY), 0.0, sin(angleY),
-        0.0, 1.0, 0.0,
-        -sin(angleY), 0.0, cos(angleY)
-    );
-    mat3 rotationZ = mat3(
-        cos(angleZ), -sin(angleZ), 0.0,
-        sin(angleZ), cos(angleZ), 0.0,
-        0.0, 0.0, 1.0
-    );
-    return rotationZ * rotationY * rotationX * v;
+    v = rotateVectorX(v, angleX);
+    v = rotateVectorY(v, angleY);
+    v = rotateVectorZ(v, angleZ);
+    return v;
+}
+
+vec3 rotationToVector(float angleX, float angleY, float angleZ) {
+    return rotateVector(0.0, 0.0, 1.0, angleX, angleY, angleZ);
 }
 
 float mapRange(float value, float inMin, float inMax, float outMin, float outMax) {
@@ -84,8 +105,12 @@ void main() {
         vec4 dayColor = texture2D(uTextureDay, vec2(earth_phi, theta));
         vec4 nightColor = texture2D(uTextureNight, vec2(earth_phi, theta));
         vec4 cloudColor = texture2D(uTextureClouds, vec2(cloud_phi, theta));
-        vec3 sunDir = rotateVector(x, y, z, -1.0, -.1, 0.0);
-        float alpha = mapRange(sunDir.x, -0.1, 0.1, 0.1, 1.0);
+        vec3 pos = vec3(x, y, z);
+        pos = rotateVectorZ(pos, sun_theta);
+        pos = rotateVectorY(pos, sun_phi);
+
+        float alpha = mapRange(pos.x-0.05, -0.1, 0.1, 0.0, 1.0);
+
         float cloudAlpha = mapRange(zoom, 0.1, 0.3, 0.0, 1.0);
         gl_FragColor = mix(nightColor,dayColor, alpha) + alpha*cloudColor*cloudAlpha;
     }
@@ -164,6 +189,8 @@ const resolutionLocation = gl.getUniformLocation(program, "resolution");
 const aspectRatioLocation = gl.getUniformLocation(program, "aspect_ratio");
 const cloudOffsetLocation = gl.getUniformLocation(program, "cloud_offset");
 const earthRotationLocation = gl.getUniformLocation(program, "earth_rotation");
+const sunPhiLocation = gl.getUniformLocation(program, "sun_phi");
+const sunThetaLocation = gl.getUniformLocation(program, "sun_theta");
 
 let phiOffset = 0.972;
 let thetaOffset = 0.29;
@@ -171,6 +198,8 @@ let zoom = 1.0;
 let aspectRatio = canvas.width / canvas.height;
 let cloudOffset = 0.0;
 let earthRotation = 0.0;
+let sunPhi = 0.0;
+let sunTheta = 0.40911;
 
 setAllUniforms();
 
@@ -182,6 +211,8 @@ function setAllUniforms() {
     gl.uniform1f(aspectRatioLocation, aspectRatio);
     gl.uniform1f(cloudOffsetLocation, cloudOffset);
     gl.uniform1f(earthRotationLocation, earthRotation);
+    gl.uniform1f(sunPhiLocation, sunPhi);
+    gl.uniform1f(sunThetaLocation, sunTheta);
 }
 
 
@@ -302,8 +333,10 @@ function addSlider(variable, min, max, location, name) {
     slider.max = max;
     slider.value = variable;
     slider.step = 0.01;
+    console.log(variable);
     slider.addEventListener("input", () => {
         variable = slider.value;
+        gl.uniform1f(location, variable);
     });
     const label = document.createElement("label");
     label.textContent = name;
@@ -312,6 +345,5 @@ function addSlider(variable, min, max, location, name) {
     document.body.appendChild(slider);
 }
 
-// addSlider(thetaOffset, -1, 1, thetaOffsetLocation, "theta offset");
-// addSlider(zoom, 1, 10, zoomLocation, "zoom");
-// addSlider(cloudOffset, 0, 1, cloudOffsetLocation, "cloud offset");
+addSlider(sunPhi, -Math.PI, Math.PI, sunPhiLocation, "Sun Phi");
+addSlider(sunTheta, -0.5 * Math.PI, 0.5 * Math.PI, sunThetaLocation, "Sun Theta");
