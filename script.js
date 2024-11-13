@@ -16,7 +16,6 @@ function addSlider(variable, min, max, location, name, step = 0.01) {
     slider.addEventListener("input", () => {
         variable = slider.value;
         gl.uniform1f(location, variable);
-        console.log(variable);
     });
     const label = document.createElement("label");
     label.textContent = name;
@@ -122,13 +121,13 @@ function createShader(gl, type, source) {
     let sunPhi = 0.0;
     let sunTheta = 0.40911;
     let atmosphere_height = 0.1;
-    let atmosphere_intensity = 1;
-    let atmosphere_density_falloff = 10;
+    let atmosphere_intensity = 2;
+    let atmosphere_density_falloff = 15;
     let toggleAtmosphere = true;
     let toggleClouds = true;
     let toggleMap = true;
     let toggleStars = true;
-    let atmosphereStepCount = 2;
+    let atmosphereStepCount = 3;
 
     function setAllUniforms() {
         gl.uniform1f(phiOffsetLocation, phiOffset);
