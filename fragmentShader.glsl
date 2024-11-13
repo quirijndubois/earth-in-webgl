@@ -205,7 +205,7 @@ void main() {
 
     if (sphereCoords.x * sphereCoords.x + sphereCoords.y * sphereCoords.y < radius * radius) {
 
-        float alpha = mapRange(sunRotatedCoords.x - 0.05, -0.1, 0.1, 0.0, 1.0);
+        float alpha = mapRange(sunRotatedCoords.x - 0.1, -0.1, 0.1, 0.0, 1.0);
         float cloudAlpha = mapRange(zoom, 0.1, 0.3, 0.0, 1.0);
 
         gl_FragColor = getDayNightCloudColor(earth_phi, cloud_phi, theta, alpha, cloudAlpha);
