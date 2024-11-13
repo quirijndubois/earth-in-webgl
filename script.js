@@ -122,12 +122,12 @@ function createShader(gl, type, source) {
     let sunTheta = 0.40911;
     let atmosphere_height = 0.1;
     let atmosphere_intensity = 2;
-    let atmosphere_density_falloff = 15;
+    let atmosphere_density_falloff = 10;
     let toggleAtmosphere = true;
     let toggleClouds = true;
     let toggleMap = true;
     let toggleStars = true;
-    let atmosphereStepCount = 3;
+    let atmosphereStepCount = 2;
 
     function setAllUniforms() {
         gl.uniform1f(phiOffsetLocation, phiOffset);
