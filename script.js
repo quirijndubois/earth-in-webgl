@@ -6,22 +6,38 @@ function mapRange(value, inMin, inMax, outMin, outMax) {
     return clamp((value - inMin) / (inMax - inMin) * (outMax - outMin) + outMin, outMin, outMax);
 }
 
-function addSlider(variable, min, max, location, name) {
+function addSlider(variable, min, max, location, name, step = 0.01) {
     const slider = document.createElement("input");
     slider.type = "range";
     slider.min = min;
     slider.max = max;
     slider.value = variable;
-    slider.step = 0.01;
+    slider.step = step;
     slider.addEventListener("input", () => {
         variable = slider.value;
         gl.uniform1f(location, variable);
+        console.log(variable);
     });
     const label = document.createElement("label");
     label.textContent = name;
     label.htmlFor = slider.id;
     document.body.appendChild(label);
     document.body.appendChild(slider);
+}
+
+function addCheckbox(variable, location, name) {
+    const checkbox = document.createElement("input");
+    checkbox.type = "checkbox";
+    checkbox.checked = variable;
+    checkbox.addEventListener("change", () => {
+        variable = checkbox.checked;
+        gl.uniform1f(location, variable);
+    });
+    const label = document.createElement("label");
+    label.textContent = name;
+    label.htmlFor = checkbox.id;
+    document.body.appendChild(label);
+    document.body.appendChild(checkbox);
 }
 
 const canvas = document.getElementById("canvas");
@@ -88,6 +104,13 @@ function createShader(gl, type, source) {
     const sunThetaLocation = gl.getUniformLocation(program, "sun_theta");
     const atmosphereHeightLocation = gl.getUniformLocation(program, "atmosphere_height");
     const atmosphereIntensityLocation = gl.getUniformLocation(program, "atmosphere_intensity");
+    const atmosphereDensityFallOffLocation = gl.getUniformLocation(program, "atmosphere_density_falloff");
+    const atmosphereStepCountLocation = gl.getUniformLocation(program, "STEPS");
+    const toggleAtmosphereLocation = gl.getUniformLocation(program, "toggle_atmosphere");
+    const toggleCloudsLocation = gl.getUniformLocation(program, "toggle_clouds");
+    const toggleMapLocation = gl.getUniformLocation(program, "toggle_map");
+    const toggleStarsLocation = gl.getUniformLocation(program, "toggle_stars");
+
 
     // Set initial values for uniforms
     let phiOffset = 0.972;
@@ -98,8 +121,14 @@ function createShader(gl, type, source) {
     let earthRotation = 0.0;
     let sunPhi = 0.0;
     let sunTheta = 0.40911;
-    let atmosphere_height = 0.05;
+    let atmosphere_height = 0.1;
     let atmosphere_intensity = 1;
+    let atmosphere_density_falloff = 10;
+    let toggleAtmosphere = true;
+    let toggleClouds = true;
+    let toggleMap = true;
+    let toggleStars = true;
+    let atmosphereStepCount = 2;
 
     function setAllUniforms() {
         gl.uniform1f(phiOffsetLocation, phiOffset);
@@ -113,6 +142,12 @@ function createShader(gl, type, source) {
         gl.uniform1f(sunThetaLocation, sunTheta);
         gl.uniform1f(atmosphereHeightLocation, atmosphere_height);
         gl.uniform1f(atmosphereIntensityLocation, atmosphere_intensity);
+        gl.uniform1f(atmosphereDensityFallOffLocation, atmosphere_density_falloff);
+        gl.uniform1f(toggleAtmosphereLocation, toggleAtmosphere);
+        gl.uniform1f(toggleCloudsLocation, toggleClouds);
+        gl.uniform1f(toggleMapLocation, toggleMap);
+        gl.uniform1f(toggleStarsLocation, toggleStars);
+        gl.uniform1f(atmosphereStepCountLocation, atmosphereStepCount);
     }
     setAllUniforms();
 
@@ -241,8 +276,14 @@ function createShader(gl, type, source) {
         gl.uniform1f(aspectRatioLocation, aspectRatio);
     });
 
-    addSlider(sunPhi, -Math.PI, Math.PI, sunPhiLocation, "Sun Phi");
-    addSlider(sunTheta, -0.5 * Math.PI, 0.5 * Math.PI, sunThetaLocation, "Sun Theta");
+    addSlider(sunPhi, -Math.PI, Math.PI, sunPhiLocation, "Sun Rotation");
+    addSlider(sunTheta, -0.5 * Math.PI, 0.5 * Math.PI, sunThetaLocation, "Sun Inclination");
     addSlider(atmosphere_height, 0, 0.2, atmosphereHeightLocation, "Atmosphere Height");
     addSlider(atmosphere_intensity, 0, 5, atmosphereIntensityLocation, "Atmosphere Intensity");
+    addSlider(atmosphere_density_falloff, 1, 20, atmosphereDensityFallOffLocation, "Atmosphere Density Fall Off");
+    addSlider(atmosphereStepCount, 1, 3, atmosphereStepCountLocation, "Atmosphere Step Count");
+    addCheckbox(toggleAtmosphere, toggleAtmosphereLocation, "Atmosphere");
+    addCheckbox(toggleClouds, toggleCloudsLocation, "Clouds");
+    addCheckbox(toggleMap, toggleMapLocation, "Map");
+    addCheckbox(toggleStars, toggleStarsLocation, "Stars");
 })();

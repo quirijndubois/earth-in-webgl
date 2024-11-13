@@ -14,11 +14,16 @@ uniform float sun_phi;
 uniform float sun_theta;
 uniform float atmosphere_height;
 uniform float atmosphere_intensity;
+uniform float atmosphere_density_falloff;
+uniform bool toggle_atmosphere;
+uniform bool toggle_clouds;
+uniform bool toggle_map;
+uniform bool toggle_stars;
+uniform float STEPS;
 
 const float PI = 3.1415;
 const float PI2 = PI * 2.0;
-const int steps = 1000;
-
+const int max_steps = 1000;
 
 vec4 floatToColor(float value) {
     return vec4(value, value, value, 1.0);
@@ -85,7 +90,17 @@ vec4 getDayNightCloudColor(float earth_phi, float cloud_phi, float theta, float 
     vec4 dayColor = texture2D(uTextureDay, vec2(earth_phi, theta));
     vec4 nightColor = texture2D(uTextureNight, vec2(earth_phi, theta));
     vec4 cloudColor = texture2D(uTextureClouds, vec2(cloud_phi, theta));
-    return mix(nightColor, dayColor, alpha) + alpha * cloudColor * cloudAlpha;
+
+    vec4 color = vec4(0.0, 0.0, 0.0, 0.0);
+    if (toggle_map) {
+        color += mix(nightColor, dayColor, alpha);
+    }
+
+    if (toggle_clouds) {
+        color += alpha * cloudColor * cloudAlpha;
+    }
+
+    return color;
 }
 
 float mapRange(float value, float inMin, float inMax, float outMin, float outMax) {
@@ -93,6 +108,9 @@ float mapRange(float value, float inMin, float inMax, float outMin, float outMax
 }
 
 vec4 getStarColor(vec2 uv, float phi, float theta) {
+    if (!toggle_stars) {
+        return vec4(0.0, 0.0, 0.0, 0.0);
+    }
     return texture2D(uTextureStars, vec2(phi, theta)) * 0.5;
 }
 
@@ -136,10 +154,11 @@ float getDistanceToSun(vec3 sunRotatedCoords, float earthRadius, float atmospher
 
 float densityAtPoint(vec3 point, float earthRadius, float atmosphereRadius) {
     float mag = sqrt(magnitudeSquared(point));
-    return mapRange(mag, atmosphereRadius,earthRadius , 0.0, 1.0);
+    float linearDensity = mapRange(mag,earthRadius, atmosphereRadius , 0.0, 1.0);
+    return exp(-linearDensity*atmosphere_density_falloff) * (1.0-linearDensity);
 }
 
-vec4 getAtmosphereColor(vec2 uv, float atmosphereRadius, float earthRadius, vec3 sunDirection) {
+vec4 getAtmosphereColor(vec2 uv, float atmosphereRadius, float earthRadius, vec3 sunDirection, int steps) {
 
     vec3 sphereCoords = getSphereCoordinates(uv, earthRadius);
     vec3 atmosphereEnterCoords = getSphereCoordinates(uv, atmosphereRadius);
@@ -149,24 +168,28 @@ vec4 getAtmosphereColor(vec2 uv, float atmosphereRadius, float earthRadius, vec3
     float atmosphereEnterDepth = atmosphereEnterCoords.z;
     float atmosphereLeaveDepth = atmosphereEnterCoords.z + distanceThroughAtmosphere;
     
-    // int steps = 10;
     float intensity = 0.0;
     float stepsize = (atmosphereLeaveDepth - atmosphereEnterDepth) / float(steps);
 
     float x = sphereCoords.x;
     float y = sphereCoords.y;
     float z = atmosphereEnterDepth;
-    for (int i = 0; i < steps; i++) {
+    for (int i = 0; i < max_steps; i++) {
+        if (i >= steps) {
+            break;
+        }
         z -= stepsize;
         vec3 rotatedCoords = applyRotations(vec3(x, y, z));
-        intensity += exp(-getDistanceToSun(rotatedCoords, earthRadius, atmosphereRadius)) * densityAtPoint(rotatedCoords, earthRadius, atmosphereRadius) * stepsize;
+        intensity += exp(-getDistanceToSun(rotatedCoords, earthRadius, atmosphereRadius)) * densityAtPoint(rotatedCoords, earthRadius, atmosphereRadius);
     }
 
-    float alpha = intensity*atmosphere_intensity;
-    return floatToColor(alpha);
+    float alpha = intensity*atmosphere_intensity*stepsize*atmosphere_density_falloff;
+    return vec4(alpha, alpha*1.2, alpha*1.5, 1.0);
 }
 
 void main() {
+    int steps = int(pow(10.0, STEPS));
+
     vec2 uv = (vTexCoord - 0.5) * zoom;
     float radius = 0.5;
 
@@ -197,6 +220,7 @@ void main() {
         gl_FragColor = getStarColor(newUv, phi, theta);
     }
 
-    // gl_FragColor *= 0.6;
-    gl_FragColor += getAtmosphereColor(uv, radius+atmosphere_height, radius, sunRotatedCoords);
+    if (toggle_atmosphere) {
+        gl_FragColor += getAtmosphereColor(uv, radius+atmosphere_height, radius, sunRotatedCoords, steps);
+    }
 }
