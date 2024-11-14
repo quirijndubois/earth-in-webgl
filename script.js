@@ -109,6 +109,10 @@ function createShader(gl, type, source) {
     const toggleCloudsLocation = gl.getUniformLocation(program, "toggle_clouds");
     const toggleMapLocation = gl.getUniformLocation(program, "toggle_map");
     const toggleStarsLocation = gl.getUniformLocation(program, "toggle_stars");
+    const scatterRLocation = gl.getUniformLocation(program, "scatterR");
+    const scatterGLocation = gl.getUniformLocation(program, "scatterG");
+    const scatterBLocation = gl.getUniformLocation(program, "scatterB");
+    const scatteringStrengthLocation = gl.getUniformLocation(program, "scattering_strength");
 
 
     // Set initial values for uniforms
@@ -128,7 +132,15 @@ function createShader(gl, type, source) {
     let toggleMap = true;
     let toggleStars = true;
     let atmosphereStepCount = 2;
+    let scatteringStrength = 4.0;
 
+    
+    let waveLengths = [700,530,440];
+    let scatterR = (400/waveLengths[0])**4;
+    let scatterG = (400/waveLengths[1])**4;
+    let scatterB = (400/waveLengths[2])**4;
+    // console.log(scatterR, scatterG, scatterB);
+    
     function setAllUniforms() {
         gl.uniform1f(phiOffsetLocation, phiOffset);
         gl.uniform1f(thetaOffsetLocation, thetaOffset);
@@ -147,6 +159,10 @@ function createShader(gl, type, source) {
         gl.uniform1f(toggleMapLocation, toggleMap);
         gl.uniform1f(toggleStarsLocation, toggleStars);
         gl.uniform1f(atmosphereStepCountLocation, atmosphereStepCount);
+        gl.uniform1f(scatterRLocation, scatterR);
+        gl.uniform1f(scatterGLocation, scatterG);
+        gl.uniform1f(scatterBLocation, scatterB);
+        gl.uniform1f(scatteringStrengthLocation, scatteringStrength);
     }
     setAllUniforms();
 
@@ -277,7 +293,7 @@ function createShader(gl, type, source) {
 
     addSlider(sunPhi, -Math.PI, Math.PI, sunPhiLocation, "Sun Rotation");
     addSlider(sunTheta, -0.5 * Math.PI, 0.5 * Math.PI, sunThetaLocation, "Sun Inclination");
-    addSlider(atmosphere_height, 0, 0.2, atmosphereHeightLocation, "Atmosphere Height");
+    addSlider(atmosphere_height, 0, 1, atmosphereHeightLocation, "Atmosphere Height");
     addSlider(atmosphere_intensity, 0, 5, atmosphereIntensityLocation, "Atmosphere Intensity");
     addSlider(atmosphere_density_falloff, 1, 20, atmosphereDensityFallOffLocation, "Atmosphere Density Fall Off");
     addSlider(atmosphereStepCount, 1, 3, atmosphereStepCountLocation, "Atmosphere Step Count");
@@ -285,4 +301,5 @@ function createShader(gl, type, source) {
     addCheckbox(toggleClouds, toggleCloudsLocation, "Clouds");
     addCheckbox(toggleMap, toggleMapLocation, "Map");
     addCheckbox(toggleStars, toggleStarsLocation, "Stars");
+    addSlider(scatteringStrength, 0, 10, scatteringStrengthLocation, "Scattering Strength");
 })();

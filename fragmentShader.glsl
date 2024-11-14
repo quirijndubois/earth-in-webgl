@@ -20,6 +20,10 @@ uniform bool toggle_clouds;
 uniform bool toggle_map;
 uniform bool toggle_stars;
 uniform float STEPS;
+uniform float scatterR;
+uniform float scatterG;
+uniform float scatterB;
+uniform float scattering_strength;
 
 const float PI = 3.1415;
 const float PI2 = PI * 2.0;
@@ -168,7 +172,10 @@ vec4 getAtmosphereColor(vec2 uv, float atmosphereRadius, float earthRadius, vec3
     float atmosphereEnterDepth = atmosphereEnterCoords.z;
     float atmosphereLeaveDepth = atmosphereEnterCoords.z + distanceThroughAtmosphere;
     
-    float intensity = 0.0;
+    vec4 scatteringCooefficients = vec4(scatterR, scatterG, scatterB, 1.0) * scattering_strength;
+
+    vec4 intensity = vec4(0.0, 0.0, 0.0, 0.0);
+    // float intensity = 0.0;
     float stepsize = (atmosphereLeaveDepth - atmosphereEnterDepth) / float(steps);
 
     float x = sphereCoords.x;
@@ -180,11 +187,10 @@ vec4 getAtmosphereColor(vec2 uv, float atmosphereRadius, float earthRadius, vec3
         }
         z -= stepsize;
         vec3 rotatedCoords = applyRotations(vec3(x, y, z));
-        intensity += exp(-getDistanceToSun(rotatedCoords, earthRadius, atmosphereRadius)) * densityAtPoint(rotatedCoords, earthRadius, atmosphereRadius);
+        intensity += exp(-getDistanceToSun(rotatedCoords, earthRadius, atmosphereRadius)*scatteringCooefficients*2.0)* exp(-distanceThroughAtmosphere*scatteringCooefficients/2.0) * densityAtPoint(rotatedCoords, earthRadius, atmosphereRadius);
     }
 
-    float alpha = intensity*atmosphere_intensity*stepsize*atmosphere_density_falloff;
-    return vec4(alpha, alpha*1.2, alpha*1.5, 1.0);
+    return intensity*atmosphere_intensity*stepsize*atmosphere_density_falloff * scatteringCooefficients;
 }
 
 void main() {
