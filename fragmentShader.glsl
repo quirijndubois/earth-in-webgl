@@ -1,4 +1,4 @@
-precision mediump float;
+precision highp float;
 varying vec2 vTexCoord;
 uniform sampler2D uTextureDay;
 uniform sampler2D uTextureNight;
@@ -187,7 +187,7 @@ vec4 getAtmosphereColor(vec2 uv, float atmosphereRadius, float earthRadius, vec3
         }
         z -= stepsize;
         vec3 rotatedCoords = applyRotations(vec3(x, y, z));
-        intensity += exp(-getDistanceToSun(rotatedCoords, earthRadius, atmosphereRadius)*scatteringCooefficients*2.0)* exp(-distanceThroughAtmosphere*scatteringCooefficients/2.0) * densityAtPoint(rotatedCoords, earthRadius, atmosphereRadius);
+        intensity += exp(-getDistanceToSun(rotatedCoords, earthRadius, atmosphereRadius)*scatteringCooefficients*3.0)* exp(-distanceThroughAtmosphere*scatteringCooefficients/3.0) * densityAtPoint(rotatedCoords, earthRadius, atmosphereRadius);
     }
 
     return intensity*atmosphere_intensity*stepsize*atmosphere_density_falloff * scatteringCooefficients;
