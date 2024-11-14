@@ -118,21 +118,21 @@ function createShader(gl, type, source) {
     // Set initial values for uniforms
     let phiOffset = 0.972;
     let thetaOffset = 0.29;
-    let zoom = 1.0;
+    let zoom = 1.5;
     let aspectRatio = canvas.width / canvas.height;
     let cloudOffset = 0.0;
     let earthRotation = 0.0;
     let sunPhi = 0.0;
     let sunTheta = 0.40911;
-    let atmosphere_height = 0.1;
-    let atmosphere_intensity = 2;
+    let atmosphere_height = 0.2;
+    let atmosphere_intensity = 3;
     let atmosphere_density_falloff = 10;
     let toggleAtmosphere = true;
     let toggleClouds = true;
     let toggleMap = true;
     let toggleStars = true;
     let atmosphereStepCount = 2;
-    let scatteringStrength = 4.0;
+    let scatteringStrength = 2.0;
 
     
     let waveLengths = [700,530,440];
