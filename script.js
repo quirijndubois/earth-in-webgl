@@ -301,5 +301,5 @@ function createShader(gl, type, source) {
     addCheckbox(toggleClouds, toggleCloudsLocation, "Clouds");
     addCheckbox(toggleMap, toggleMapLocation, "Map");
     addCheckbox(toggleStars, toggleStarsLocation, "Stars");
-    addSlider(scatteringStrength, 0, 10, scatteringStrengthLocation, "Scattering Strength");
+    addSlider(scatteringStrength, 0.1, 5, scatteringStrengthLocation, "Scattering Strength");
 })();
